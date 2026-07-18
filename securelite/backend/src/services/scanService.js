@@ -68,6 +68,12 @@ export const createAndRunScan = async ({ user, targetUrl, scanType = "full", tri
               validTo: "",
               message: ""
             },
+            malware: result.malware || {
+              grade: "",
+              riskScore: 0,
+              reputation: { malicious: 0, suspicious: 0, harmless: 0, undetected: 0, timeout: 0 },
+              message: ""
+            },
             openPorts: result.openPorts || [],
             rawFindings: { [scanType]: result.raw }
           }));
@@ -84,11 +90,13 @@ export const createAndRunScan = async ({ user, targetUrl, scanType = "full", tri
       ssl: { status: "skipped", issues: [] },
       ports: { status: "skipped", issues: [] },
       config: { status: "skipped", issues: [] },
+      malware: { status: "skipped", issues: [] },
       ...results.findingsByType
     };
     scan.fixes = results.fixes;
     scan.openPorts = results.openPorts;
     scan.ssl = results.ssl;
+    scan.malware = results.malware;
     scan.rawFindings = results.rawFindings;
     await scan.save();
 

@@ -7,7 +7,8 @@ const scanOptions = [
   { value: "xss", label: "XSS / CSRF" },
   { value: "ssl", label: "SSL / HTTPS" },
   { value: "ports", label: "Open ports" },
-  { value: "config", label: "Config / headers" }
+  { value: "config", label: "Config / headers" },
+  { value: "malware", label: "Malware / reputation" }
 ];
 
 export default function ScanForm({ onSubmit, loading }) {
@@ -23,7 +24,10 @@ export default function ScanForm({ onSubmit, loading }) {
     <form className="scan-form" onSubmit={handleSubmit}>
       <div>
         <h3>Run a website scan</h3>
-        <p>Paste your website address below. We will turn technical findings into plain-English advice.</p>
+        <p>
+          Paste your website address below. A live scan overlay will appear here, show each scan step in order, and
+          turn completed steps green automatically.
+        </p>
       </div>
       <div className="scan-mode-row">
         {scanOptions.map((option) => (

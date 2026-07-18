@@ -33,18 +33,32 @@ const mockXssFindings = (targetUrl) => {
 };
 
 const runZapAlertQuery = async ({ targetUrl, keyword }) => {
-  const alertsResponse = await axios.get(`${env.zapBaseUrl}/JSON/alert/view/alerts/`, {
-    params: { apikey: env.zapApiKey, baseurl: targetUrl }
-  });
+  try {
+    const alertsResponse = await axios.get(`${env.zapBaseUrl}/JSON/alert/view/alerts/`, {
+      params: { apikey: env.zapApiKey, baseurl: targetUrl },
+      timeout: 8000
+    });
 
-  return alertsResponse.data.alerts
-    .filter((alert) => alert.alert.toLowerCase().includes(keyword))
-    .map((alert) => ({
-      scanner: "zap",
-      type: keyword.includes("sql") ? "sqli" : keyword.includes("cross") ? "xss" : "csrf",
-      severity: (alert.risk || "low").toLowerCase(),
-      technicalDetails: `${alert.alert}: ${alert.description || "See ZAP output for details."}`
-    }));
+    const alerts = Array.isArray(alertsResponse.data?.alerts) ? alertsResponse.data.alerts : [];
+
+    return alerts
+      .filter((alert) => alert.alert?.toLowerCase().includes(keyword))
+      .map((alert) => ({
+        scanner: "zap",
+        type: keyword.includes("sql") ? "sqli" : keyword.includes("cross") ? "xss" : "csrf",
+        severity: (alert.risk || "low").toLowerCase(),
+        technicalDetails: `${alert.alert}: ${alert.description || "See ZAP output for details."}`
+      }));
+  } catch (_error) {
+    return [
+      {
+        scanner: "zap-fallback",
+        type: keyword.includes("sql") ? "sqli" : keyword.includes("cross") ? "xss" : "csrf",
+        severity: "info",
+        technicalDetails: "OWASP ZAP could not be reached, so SecureLite used a safe fallback for this check."
+      }
+    ];
+  }
 };
 
 export const runSqlScan = async ({ targetUrl }) => {

@@ -5,11 +5,22 @@ const defaultHeaders = [
   { key: "content-security-policy", title: "Missing Content Security Policy", severity: "medium" },
   { key: "x-frame-options", title: "Missing frame protection", severity: "medium" },
   { key: "strict-transport-security", title: "Missing HSTS header", severity: "low" },
-  { key: "x-content-type-options", title: "Missing MIME type protection", severity: "low" }
+  { key: "x-content-type-options", title: "Missing MIME type protection", severity: "low" },
+  { key: "referrer-policy", title: "Missing referrer privacy policy", severity: "low" }
 ];
 
 export const runSslCheck = async ({ hostname }) =>
   new Promise((resolve) => {
+    let settled = false;
+    const finish = (payload) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      resolve(payload);
+    };
+
     const socket = tls.connect(
       {
         host: hostname,
@@ -19,15 +30,19 @@ export const runSslCheck = async ({ hostname }) =>
       },
       () => {
         const certificate = socket.getPeerCertificate();
+        const protocol = socket.getProtocol?.() || "";
+        const authorizationError = socket.authorizationError || "";
         socket.end();
 
-        resolve({
+        finish({
           isValid: Boolean(certificate.valid_to),
           issuer: certificate.issuer?.O || certificate.issuer?.CN || "Unknown issuer",
           validTo: certificate.valid_to || "",
           message: certificate.valid_to
-            ? "HTTPS is enabled with a detected certificate."
+            ? `HTTPS is enabled with a detected certificate${protocol ? ` using ${protocol}` : ""}.`
             : "A valid HTTPS certificate was not detected.",
+          tlsVersion: protocol,
+          authorizationError,
           issues: certificate.valid_to
             ? []
             : [
@@ -42,18 +57,42 @@ export const runSslCheck = async ({ hostname }) =>
       }
     );
 
-    socket.on("error", () =>
-      resolve({
+    socket.setTimeout(8000);
+
+    socket.on("timeout", () => {
+      socket.destroy();
+      finish({
         isValid: false,
         issuer: "",
         validTo: "",
-        message: "We could not verify a valid HTTPS certificate for this website.",
+        message: "The SSL/TLS check timed out before the website completed a secure handshake.",
+        tlsVersion: "",
+        authorizationError: "timeout",
         issues: [
           {
             scanner: "ssl-custom",
             type: "ssl",
             severity: "high",
-            technicalDetails: "TLS handshake failed or no certificate was available on port 443."
+            technicalDetails: "TLS handshake timed out while connecting to port 443."
+          }
+        ]
+      });
+    });
+
+    socket.on("error", (error) =>
+      finish({
+        isValid: false,
+        issuer: "",
+        validTo: "",
+        message: "We could not verify a valid HTTPS certificate for this website.",
+        tlsVersion: "",
+        authorizationError: error?.message || "handshake_failed",
+        issues: [
+          {
+            scanner: "ssl-custom",
+            type: "ssl",
+            severity: "high",
+            technicalDetails: `TLS handshake failed or no certificate was available on port 443. ${error?.message || ""}`.trim()
           }
         ]
       })

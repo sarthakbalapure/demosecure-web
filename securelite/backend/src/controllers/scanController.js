@@ -2,6 +2,7 @@ import { Scan } from "../models/Scan.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { createAndRunScan } from "../services/scanService.js";
 import { AppError } from "../utils/appError.js";
+import { buildPdfReport } from "../services/pdfReportService.js";
 
 const runScanResponse = async ({ req, res, scanType }) => {
   const scan = await createAndRunScan({
@@ -41,6 +42,10 @@ export const startConfigScan = asyncHandler(async (req, res) => {
   await runScanResponse({ req, res, scanType: "config" });
 });
 
+export const startMalwareScan = asyncHandler(async (req, res) => {
+  await runScanResponse({ req, res, scanType: "malware" });
+});
+
 export const getScanHistory = asyncHandler(async (req, res) => {
   const scans = await Scan.find({ user: req.user._id }).sort({ createdAt: -1 });
 
@@ -61,4 +66,18 @@ export const getScanById = asyncHandler(async (req, res) => {
     success: true,
     data: scan
   });
+});
+
+export const downloadScanPdf = asyncHandler(async (req, res) => {
+  const scan = await Scan.findOne({ _id: req.params.id, user: req.user._id });
+
+  if (!scan) {
+    throw new AppError("Scan not found", 404);
+  }
+
+  const pdfBuffer = await buildPdfReport({ scan });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="securelite-report-${scan.domain}.pdf"`);
+  res.send(pdfBuffer);
 });

@@ -10,7 +10,12 @@ import ScanHistoryTable from "../components/ScanHistoryTable.jsx";
 import InfrastructureCard from "../components/InfrastructureCard.jsx";
 import PlanCard from "../components/PlanCard.jsx";
 import AdminOverview from "../components/AdminOverview.jsx";
+import ScanOverlay from "../components/ScanOverlay.jsx";
+import DashboardInsights from "../components/DashboardInsights.jsx";
+import ThreatActivityPanel from "../components/ThreatActivityPanel.jsx";
 import { useAuth } from "../hooks/useAuth.js";
+
+const orderedSteps = ["sql", "xss", "ssl", "ports", "config", "malware"];
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -20,6 +25,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState("");
+  const [overlayVisible, setOverlayVisible] = useState(false);
+  const [overlayTargetUrl, setOverlayTargetUrl] = useState("");
+  const [activeStep, setActiveStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState([]);
 
   const fetchDashboardData = async () => {
     try {
@@ -48,16 +57,61 @@ export default function DashboardPage() {
     try {
       setSubmitLoading(true);
       setError("");
+      setOverlayVisible(true);
+      setOverlayTargetUrl(payload.targetUrl);
+      setActiveStep(0);
+      setCompletedSteps([]);
+
+      let progressIndex = 0;
+      const intervalId = window.setInterval(() => {
+        setCompletedSteps((current) => {
+          if (current.length >= orderedSteps.length) {
+            window.clearInterval(intervalId);
+            return current;
+          }
+
+          const nextStep = orderedSteps[current.length];
+          return [...current, nextStep];
+        });
+
+        progressIndex += 1;
+        setActiveStep(Math.min(progressIndex, orderedSteps.length - 1));
+      }, 1200);
+
       const endpoint = payload.scanType === "full" ? "/scans" : `/scans/${payload.scanType}`;
       const response = await api.post(endpoint, { targetUrl: payload.targetUrl });
       const newScan = response.data.data;
       setScans((current) => [newScan, ...current]);
-      navigate(`/results/${newScan._id}`);
+
+      const finalize = () => {
+        window.clearInterval(intervalId);
+        setCompletedSteps(orderedSteps);
+        setActiveStep(orderedSteps.length - 1);
+        window.setTimeout(() => {
+          setOverlayVisible(false);
+          navigate(`/results/${newScan._id}`);
+        }, 1000);
+      };
+
+      if (progressIndex >= orderedSteps.length) {
+        finalize();
+      } else {
+        const waitTimer = window.setInterval(() => {
+          if (progressIndex >= orderedSteps.length) {
+            window.clearInterval(waitTimer);
+            finalize();
+          }
+        }, 200);
+      }
     } catch (apiError) {
       setError(apiError.response?.data?.message || "We could not run that scan.");
     } finally {
       setSubmitLoading(false);
     }
+  };
+
+  const handleCloseOverlay = () => {
+    setOverlayVisible(false);
   };
 
   const handleLogout = () => {
@@ -70,6 +124,14 @@ export default function DashboardPage() {
 
   return (
     <Layout user={user} onLogout={handleLogout}>
+      <ScanOverlay
+        visible={overlayVisible}
+        targetUrl={overlayTargetUrl}
+        activeStep={activeStep}
+        completedSteps={completedSteps}
+        error={error}
+        onClose={handleCloseOverlay}
+      />
       <motion.div className="page-header" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <div>
           <span className="eyebrow">{isOwner ? "Owner dashboard" : "Dashboard"}</span>
@@ -86,10 +148,14 @@ export default function DashboardPage() {
       {error ? <div className="banner-error">{error}</div> : null}
 
       {isOwner ? null : (
-        <div className="dashboard-grid">
-          <ScoreCard latestScan={latestScan} />
-          <InfrastructureCard latestScan={latestScan} />
-        </div>
+        <>
+          <DashboardInsights scans={scans} />
+          <div className="dashboard-grid">
+            <ScoreCard latestScan={latestScan} />
+            <InfrastructureCard latestScan={latestScan} />
+          </div>
+          <ThreatActivityPanel scans={scans} />
+        </>
       )}
 
       {loading ? (

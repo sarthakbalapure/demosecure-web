@@ -5,6 +5,7 @@ import SignupPage from "./pages/SignupPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import ResultsPage from "./pages/ResultsPage.jsx";
+import ScanSessionPage from "./pages/ScanSessionPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { token, loading } = useAuth();
@@ -36,6 +37,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ResultsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/scan-session"
+        element={
+          <ProtectedRoute>
+            <ScanSessionPage />
           </ProtectedRoute>
         }
       />

@@ -6,7 +6,8 @@ const scanTypeLabels = {
   xss: "XSS / CSRF",
   ssl: "SSL / HTTPS",
   ports: "Open Ports",
-  config: "Config / Headers"
+  config: "Config / Headers",
+  malware: "Malware / Reputation"
 };
 
 export default function ResultsSummary({ scan }) {

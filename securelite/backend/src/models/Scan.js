@@ -12,7 +12,15 @@ const issueSchema = new mongoose.Schema(
     title: { type: String, required: true },
     technicalDetails: { type: String, default: "" },
     plainEnglish: { type: String, required: true },
-    recommendation: { type: String, required: true }
+    recommendation: { type: String, required: true },
+    howToFix: {
+      type: [String],
+      default: []
+    },
+    sampleFix: {
+      type: String,
+      default: ""
+    }
   },
   { _id: false }
 );
@@ -35,7 +43,7 @@ const scanSchema = new mongoose.Schema(
     },
     scanType: {
       type: String,
-      enum: ["full", "sql", "xss", "ssl", "ports", "config"],
+      enum: ["full", "sql", "xss", "ssl", "ports", "config", "malware"],
       default: "full"
     },
     triggeredBy: {
@@ -50,7 +58,7 @@ const scanSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["mock", "zap", "nmap", "hybrid"],
+      enum: ["mock", "zap", "nmap", "hybrid", "virustotal", "virustotal-fallback"],
       default: "mock"
     },
     securityScore: {
@@ -89,6 +97,10 @@ const scanSchema = new mongoose.Schema(
       config: {
         status: { type: String, default: "pending" },
         issues: { type: [issueSchema], default: [] }
+      },
+      malware: {
+        status: { type: String, default: "pending" },
+        issues: { type: [issueSchema], default: [] }
       }
     },
     fixes: {
@@ -110,6 +122,18 @@ const scanSchema = new mongoose.Schema(
       isValid: { type: Boolean, default: false },
       issuer: { type: String, default: "" },
       validTo: { type: String, default: "" },
+      message: { type: String, default: "" }
+    },
+    malware: {
+      grade: { type: String, default: "" },
+      riskScore: { type: Number, default: 0 },
+      reputation: {
+        malicious: { type: Number, default: 0 },
+        suspicious: { type: Number, default: 0 },
+        harmless: { type: Number, default: 0 },
+        undetected: { type: Number, default: 0 },
+        timeout: { type: Number, default: 0 }
+      },
       message: { type: String, default: "" }
     },
     rawFindings: {

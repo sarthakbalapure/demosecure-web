@@ -1,8 +1,10 @@
 import { Router } from "express";
 import {
+  downloadScanPdf,
   getScanById,
   getScanHistory,
   startConfigScan,
+  startMalwareScan,
   startPortScan,
   startScan,
   startSqlScan,
@@ -17,12 +19,14 @@ const router = Router();
 
 router.use(protect);
 router.get("/", getScanHistory);
+router.get("/:id/report.pdf", downloadScanPdf);
 router.post("/", scanValidator, validate, startScan);
 router.post("/sql", scanValidator, validate, startSqlScan);
 router.post("/xss", scanValidator, validate, startXssScan);
 router.post("/ssl", scanValidator, validate, startSslScan);
 router.post("/ports", scanValidator, validate, startPortScan);
 router.post("/config", scanValidator, validate, startConfigScan);
+router.post("/malware", scanValidator, validate, startMalwareScan);
 router.get("/:id", getScanById);
 
 export default router;

@@ -16,6 +16,7 @@ export const env = {
   emailFrom: process.env.EMAIL_FROM || "SecureLite <alerts@example.com>",
   zapBaseUrl: process.env.ZAP_BASE_URL || "http://127.0.0.1:8080",
   zapApiKey: process.env.ZAP_API_KEY || "",
+  virusTotalApiKey: process.env.VIRUSTOTAL_API_KEY || "",
   useMockScanner: String(process.env.USE_MOCK_SCANNER || "true") === "true",
   enableWeeklyScans: String(process.env.ENABLE_WEEKLY_SCANS || "false") === "true",
   weeklyScanCron: process.env.WEEKLY_SCAN_CRON || "0 9 * * 1"
